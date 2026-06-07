@@ -1,0 +1,936 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sales & Revenue Dashboard</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --text:#e5e7eb;
+      --muted:#94a3b8;
+      --border:rgba(148,163,184,.30);
+
+      --accent:#60a5fa;
+      --accent2:#34d399;
+      --accent3:#f59e0b;
+      --accent4:#f472b6;
+
+      --shadow: 0 16px 50px rgba(0,0,0,.35);
+    }
+
+    *{box-sizing:border-box;}
+
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background:
+        radial-gradient(1200px 700px at 10% 10%, rgba(96,165,250,.20), transparent 55%),
+        radial-gradient(900px 600px at 90% 18%, rgba(52,211,153,.16), transparent 55%),
+        radial-gradient(600px 420px at 30% 80%, rgba(244,114,182,.10), transparent 55%),
+        var(--bg);
+      color:var(--text);
+    }
+
+    a{color:inherit; text-decoration:none;}
+
+    .topbar{
+      position:sticky; top:0; z-index:50;
+      backdrop-filter: blur(14px);
+      background: linear-gradient(180deg, rgba(29,45,80,.72), rgba(11,18,32,.35));
+      border-bottom:1px solid var(--border);
+      padding:16px 18px;
+    }
+    .topbar .row{
+      display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+      max-width:1200px; margin:0 auto;
+    }
+    .brand{
+      display:flex; flex-direction:column; gap:4px;
+    }
+    .brand h1{
+      margin:0; font-size:18px; letter-spacing:.2px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent3));
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+    }
+    .brand .sub{color:var(--muted); font-size:13px; max-width:720px;}
+
+    .nav{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    }
+
+    .pill{
+      border:1px solid var(--border);
+      background: rgba(15,23,42,.45);
+      padding:10px 12px;
+      border-radius:999px;
+      display:flex; gap:8px; align-items:center;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .06s ease, border-color .12s ease, background .12s ease;
+    }
+    .pill:hover{ transform: translateY(-1px); border-color: rgba(96,165,250,.55); }
+    .pill.active{ border-color: rgba(96,165,250,.70); background: rgba(96,165,250,.12); }
+    .dot{
+      width:10px; height:10px; border-radius:50%;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(96,165,250,.18);
+    }
+    .pill.home .dot{ background: var(--accent2); box-shadow: 0 0 0 4px rgba(52,211,153,.18); }
+    .pill.dashboard .dot{ background: var(--accent); box-shadow: 0 0 0 4px rgba(96,165,250,.18); }
+
+    .badge{
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(148,163,184,.25);
+      color:var(--muted);
+      background: rgba(15,23,42,.35);
+    }
+
+    main{ padding:16px 18px 34px; max-width:1200px; margin:0 auto; }
+
+    .view{ display:none; }
+    .view.active{ display:block; }
+
+    .hero{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:14px;
+      align-items:start;
+    }
+    @media (max-width: 980px){ .hero{ grid-template-columns: 1fr; } }
+
+    .heroCard{
+      background: rgba(15,23,42,.55);
+      border:1px solid var(--border);
+      border-radius:18px;
+      padding:18px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      position:relative;
+    }
+    .heroCard:before{
+      content:"";
+      position:absolute; inset:-2px;
+      background:
+        radial-gradient(600px 220px at 15% 0%, rgba(96,165,250,.35), transparent 45%),
+        radial-gradient(540px 240px at 95% 10%, rgba(52,211,153,.25), transparent 50%),
+        radial-gradient(420px 220px at 70% 120%, rgba(245,158,11,.18), transparent 55%);
+      opacity:.60;
+      pointer-events:none;
+    }
+    .heroCard > *{ position:relative; z-index:1; }
+
+    .heroTitle{ margin:0; font-size:26px; line-height:1.2; letter-spacing:.2px; }
+    .heroText{ color:var(--muted); margin-top:10px; font-size:14px; line-height:1.5; max-width:720px; }
+
+    .kpiQuick{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+      margin-top:14px;
+    }
+    @media (max-width: 520px){ .kpiQuick{ grid-template-columns: 1fr; } }
+
+    .mini{
+      background: rgba(15,23,42,.35);
+      border:1px solid rgba(148,163,184,.25);
+      border-radius:16px;
+      padding:14px;
+    }
+    .mini .t{ color:var(--muted); font-size:12px; }
+    .mini .v{ font-size:20px; font-weight:850; margin-top:6px; }
+
+    .dashLayout{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+    }
+
+    .grid-kpis{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(180px, 1fr));
+      gap:12px;
+      margin-bottom:14px;
+    }
+    @media (max-width: 980px){.grid-kpis{grid-template-columns:repeat(2, minmax(180px, 1fr));}}
+    @media (max-width: 520px){.grid-kpis{grid-template-columns:1fr;}}
+
+    .card{
+      background: rgba(15,23,42,.50);
+      border:1px solid rgba(148,163,184,.30);
+      border-radius:18px;
+      padding:16px;
+      box-shadow: var(--shadow);
+      position:relative;
+      overflow:hidden;
+      transition: transform .12s ease, border-color .12s ease, background .12s ease;
+      min-height:110px;
+    }
+    .card:hover{ transform: translateY(-2px); border-color: rgba(96,165,250,.65); }
+
+    /* Different colors per KPI card */
+    .grid-kpis .card:nth-child(1){ border-color: rgba(96,165,250,.55); }
+    .grid-kpis .card:nth-child(1) .kpi-value{ color: #dbeafe; }
+
+    .grid-kpis .card:nth-child(2){ border-color: rgba(52,211,153,.55); }
+    .grid-kpis .card:nth-child(2) .kpi-value{ color: #dcfce7; }
+
+    .grid-kpis .card:nth-child(3){ border-color: rgba(245,158,11,.55); }
+    .grid-kpis .card:nth-child(3) .kpi-value{ color: #ffedd5; }
+
+    .grid-kpis .card:nth-child(4){ border-color: rgba(244,114,182,.55); }
+    .grid-kpis .card:nth-child(4) .kpi-value{ color: #fce7f3; }
+
+    .kpi-title{ color:var(--muted); font-size:12px; display:flex; justify-content:space-between; gap:10px; align-items:center; }
+    .kpi-value{ font-size:34px; font-weight:900; letter-spacing:.2px; margin-top:6px; }
+    .kpi-foot{ color:var(--muted); font-size:12px; margin-top:8px; }
+
+    .controls{
+      display:grid;
+      grid-template-columns: 1.2fr .8fr;
+      gap:12px;
+      align-items:start;
+    }
+    @media (max-width: 980px){ .controls{ grid-template-columns: 1fr; } }
+
+    .control{
+      background: rgba(15,23,42,.42);
+      border:1px solid rgba(148,163,184,.22);
+      border-radius:16px;
+      padding:14px;
+    }
+    .control label{ display:block; font-size:12px; color:var(--muted); margin-bottom:8px; }
+
+    input[type="file"], select{
+      width:100%;
+      color:var(--text);
+      background: rgba(2,6,23,.30);
+      border:1px solid rgba(148,163,184,.26);
+      padding:10px 10px;
+      border-radius:12px;
+      outline:none;
+    }
+    select{ appearance:none; }
+
+    .row2{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+      align-items:end;
+    }
+    @media (max-width: 520px){ .row2{ grid-template-columns: 1fr; } }
+
+    .btn{
+      cursor:pointer;
+      background: linear-gradient(180deg, rgba(96,165,250,.95), rgba(59,130,246,.9));
+      border:1px solid rgba(96,165,250,.6);
+      color:white;
+      padding:10px 14px;
+      border-radius:12px;
+      font-weight:750;
+      transition: transform .06s ease;
+      white-space:nowrap;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn.secondary{
+      background: rgba(2,6,23,.30);
+      border:1px solid rgba(148,163,184,.26);
+      color:var(--text);
+      font-weight:700;
+    }
+
+    .hint{ color:var(--muted); font-size:12px; margin-top:10px; line-height:1.4; }
+
+    .filtersBlock{ display:grid; grid-template-columns: 1fr; gap:10px; }
+
+    .split{
+      display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+    }
+
+    .dashGrid{
+      display:grid;
+      grid-template-columns: 1.45fr 1fr;
+      gap:12px;
+      margin-top:12px;
+    }
+    @media (max-width: 980px){ .dashGrid{ grid-template-columns: 1fr; } }
+
+    .chartWrap{ height: 360px; background: rgba(15,23,42,.42); border:1px solid rgba(148,163,184,.22); border-radius:18px; padding:12px; }
+    .chartWrap canvas{ width:100% !important; height:100% !important; }
+
+    .panelCard{ background: rgba(15,23,42,.42); border:1px solid rgba(148,163,184,.22); border-radius:18px; padding:14px; }
+
+    .topHeader{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+    .topHeader .label{ color:var(--muted); font-size:12px; margin-bottom:8px; }
+    #topProductsTitle{ font-size:16px; font-weight:850; letter-spacing:.2px; }
+
+    .list{ max-height: 280px; overflow:auto; padding-right:6px; margin-top:10px; }
+    .rowitem{ display:flex; justify-content:space-between; gap:10px; padding:10px 10px; border:1px solid rgba(148,163,184,.18); border-radius:14px; background: rgba(2,6,23,.18); margin-bottom:8px; }
+    .rowitem .name{ font-weight:800; }
+    .rowitem .val{ color:var(--muted); font-weight:800; }
+
+    footer{ padding:16px 0 30px; color:var(--muted); font-size:12px; max-width:1200px; margin:0 auto; }
+
+    .spinner{
+      width:14px;height:14px;border-radius:50%;
+      border:2px solid rgba(148,163,184,.35);
+      border-top-color: rgba(96,165,250,.95);
+      animation: spin 1s linear infinite;
+      display:none;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+
+    .srOnly{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+    /* Make multi-select look nicer */
+    select[multiple]{ height: 140px; }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="row">
+      <div class="brand">
+        <h1>Sales & Revenue Dashboard</h1>
+        <div class="sub">Upload data, analyze KPIs, and explore revenue trends.</div>
+      </div>
+      <div class="nav">
+        <div class="pill home active" id="navHome" role="button" tabindex="0" aria-label="Home">
+          <span class="dot"></span>
+          <b>Home</b>
+        </div>
+        <div class="pill dashboard" id="navDashboard" role="button" tabindex="0" aria-label="Dashboard">
+          <span class="dot" style="background:var(--accent)"></span>
+          <b>Dashboard</b>
+        </div>
+        <span class="badge" id="statusBadge">No data loaded</span>
+        <span class="spinner" id="spinner" aria-hidden="true"></span>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <!-- HOME VIEW -->
+    <section class="view active" id="viewHome">
+      <div class="hero">
+        <div class="heroCard">
+          <h2 class="heroTitle">Analyze sales & revenue in minutes</h2>
+          <div class="heroText">
+            This dashboard runs fully in your browser. Import a <b>CSV</b> or <b>XLSX</b> export, then use
+            filters to slice data by <b>product</b> and time range.
+          </div>
+
+          <div class="kpiQuick" aria-label="Quick feature summary">
+            <div class="mini">
+              <div class="t">KPIs</div>
+              <div class="v">Total Sales / Revenue</div>
+            </div>
+            <div class="mini">
+              <div class="t">Trends</div>
+              <div class="v">Revenue over time</div>
+            </div>
+            <div class="mini">
+              <div class="t">Top Products</div>
+              <div class="v">Ranked by revenue</div>
+            </div>
+            <div class="mini">
+              <div class="t">Interactive</div>
+              <div class="v">Multi-select filters</div>
+            </div>
+          </div>
+
+          <div class="hint" style="margin-top:14px">
+            Tip: your spreadsheet columns should include <b>Date</b>, <b>Product</b>, and one of
+            <b>Sales</b>/<b>Revenue</b> (case-insensitive).
+          </div>
+        </div>
+
+        <div class="heroCard" style="padding:16px">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px">
+            <div>
+              <div style="color:var(--muted); font-size:12px; margin-bottom:8px">Get started</div>
+              <div style="font-size:16px; font-weight:900">Open Dashboard</div>
+            </div>
+            <span class="badge">No setup needed</span>
+          </div>
+
+          <div class="hint">
+            Click <b>Dashboard</b>, upload your file, then use the filters to update KPIs and the chart.
+          </div>
+
+          <button class="btn" style="margin-top:12px; width:100%" id="goDashboardBtn" type="button">Go to Dashboard</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- DASHBOARD VIEW -->
+    <section class="view" id="viewDashboard">
+      <section class="grid-kpis" aria-label="KPI cards">
+        <div class="card">
+          <div class="kpi-title"><span>Total Sales</span><span class="badge" id="kpiSalesMeta">—</span></div>
+          <div class="kpi-value" id="kpiTotalSales">—</div>
+          <div class="kpi-foot">Sum of selected sales amount field</div>
+        </div>
+        <div class="card">
+          <div class="kpi-title"><span>Total Revenue</span><span class="badge" id="kpiRevenueMeta">—</span></div>
+          <div class="kpi-value" id="kpiTotalRevenue">—</div>
+          <div class="kpi-foot">Sum of selected revenue amount field</div>
+        </div>
+        <div class="card">
+          <div class="kpi-title"><span>Avg Revenue / Sale</span><span class="badge" id="kpiAvgMeta">—</span></div>
+          <div class="kpi-value" id="kpiAvgRevenue">—</div>
+          <div class="kpi-foot">Revenue divided by number of rows (after filters)</div>
+        </div>
+        <div class="card">
+          <div class="kpi-title"><span>Top Product</span><span class="badge" id="kpiTopMeta">—</span></div>
+          <div class="kpi-value" id="kpiTopProduct">—</div>
+          <div class="kpi-foot" id="kpiTopProductFoot">—</div>
+        </div>
+      </section>
+
+      <section class="controls" aria-label="Data import and filters">
+        <div class="control">
+          <label>Import file (CSV or XLSX)</label>
+          <input id="fileInput" type="file" accept=".csv,.xlsx,.xls" />
+          <div class="hint">
+            Expected columns (case-insensitive): <b>date</b>, <b>product</b>, <b>sales</b> and/or <b>revenue</b>.
+          </div>
+        </div>
+
+        <div class="control">
+          <label>Chart grouping</label>
+          <div class="row2">
+            <select id="groupBy">
+              <option value="week">Week</option>
+              <option value="month" selected>Month</option>
+              <option value="quarter">Quarter</option>
+            </select>
+            <button class="btn secondary" id="resetBtn" type="button">Reset dashboard</button>
+          </div>
+
+          <div class="hint">Controls X-axis aggregation for the revenue trend chart.</div>
+        </div>
+
+        <div class="control" style="grid-column: 1 / -1">
+          <label>Filters</label>
+          <div class="filtersBlock">
+            <select id="productFilter" multiple size="6"></select>
+            <div class="split">
+              <button class="btn secondary" id="clearProductBtn" type="button">Clear products</button>
+              <button class="btn" id="applyBtn" type="button">Apply</button>
+
+              <div style="margin-left:auto; display:flex; gap:10px; align-items:end; flex-wrap:wrap">
+                <div style="min-width: 230px">
+                  <select id="rangePreset">
+                    <option value="all" selected>All dates</option>
+                    <option value="last12">Last 12 months</option>
+                    <option value="ytd">Year-to-date (max year in data)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div class="hint">Use Ctrl/⌘ to select multiple products. Range applies to chart + KPIs.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="dashGrid">
+        <div class="chartWrap">
+          <canvas id="trendChart"></canvas>
+        </div>
+
+        <div class="panelCard">
+          <div class="topHeader">
+            <div>
+              <div class="label">Top products (by revenue)</div>
+              <div id="topProductsTitle">—</div>
+            </div>
+            <span class="badge" id="topCountBadge">—</span>
+          </div>
+
+          <div class="list" id="topList" aria-label="Top products list"></div>
+          <div class="hint">Updates automatically when you apply filters.</div>
+        </div>
+      </section>
+    </section>
+
+    <footer>
+      <b>Note:</b> This dashboard runs fully in the browser. Ensure your spreadsheet columns are labeled like
+      <code>Date</code>, <code>Product</code>, <code>Sales</code>, and/or <code>Revenue</code>.
+    </footer>
+  </main>
+
+  <!-- Libraries -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      rawRows: [],
+      rows: [],
+      columns: {},
+      filters: {
+        products: new Set(),
+        groupBy: 'month',
+        rangePreset: 'all'
+      },
+      kpis: {
+        salesField: null,
+        revenueField: null,
+        dateField: null,
+        productField: null,
+      }
+    };
+
+    function norm(s){
+      return (s ?? '').toString().trim().toLowerCase();
+    }
+
+    function guessColumn(headers){
+      const headerNorms = headers.map(h => norm(h));
+
+      const pick = (candidates) => {
+        for (const cand of candidates){
+          const idx = headerNorms.findIndex(h => h === cand || h.includes(cand));
+          if (idx !== -1) return headers[idx];
+        }
+        return null;
+      };
+
+      return {
+        date: pick(['date', 'order date', 'transaction date', 'day']),
+        product: pick(['product', 'item', 'sku', 'description']),
+        sales: pick(['sales', 'units', 'quantity', 'amount']),
+        revenue: pick(['revenue', 'amount', 'sales amount', 'total', 'net revenue'])
+      };
+    }
+
+    function parseNumber(v){
+      if (v === null || v === undefined) return NaN;
+      const s = (''+v).trim();
+      if (!s) return NaN;
+      const cleaned = s.replace(/[^0-9eE+\-\.]/g,'').replace(/(\..*)\./,'$1');
+      const n = Number(cleaned);
+      return Number.isFinite(n) ? n : NaN;
+    }
+
+    function parseDate(v){
+      if (!v) return null;
+      if (v instanceof Date) return v;
+      const s = (''+v).trim();
+      if (!s) return null;
+
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) return d;
+
+      const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+      if (m){
+        let a = Number(m[1]);
+        let b = Number(m[2]);
+        let y = Number(m[3]);
+        if (y < 100) y += 2000;
+        const day = a > 12 ? a : b;
+        const month = a > 12 ? b : a;
+        const dt = new Date(y, month-1, day);
+        if (!isNaN(dt.getTime())) return dt;
+      }
+      return null;
+    }
+
+    function startOfWeek(d){
+      const dt = new Date(d);
+      const day = (dt.getDay()+6)%7; // Monday
+      dt.setDate(dt.getDate()-day);
+      dt.setHours(0,0,0,0);
+      return dt;
+    }
+
+    function bucketKey(d, group){
+      const dt = new Date(d);
+      if (group === 'week') return startOfWeek(dt).toISOString().slice(0,10);
+      if (group === 'month') return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+      if (group === 'quarter') return `${dt.getFullYear()}-Q${Math.floor(dt.getMonth()/3)+1}`;
+      return dt.toISOString().slice(0,10);
+    }
+
+    function formatMoney(n){
+      if (!Number.isFinite(n)) return '—';
+      return new Intl.NumberFormat(undefined, {style:'currency', currency:'USD', maximumFractionDigits:2}).format(n);
+    }
+
+    function formatCompact(n){
+      if (!Number.isFinite(n)) return '—';
+      return new Intl.NumberFormat(undefined, {notation:'compact', maximumFractionDigits:2}).format(n);
+    }
+
+    function escapeHtml(str){
+      return (str ?? '').toString().replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;',
+        '<': '<',
+        '>': '>',
+        '"': '"',
+        "'": '&#039;'
+      })[c]);
+    }
+
+    function setLoading(on){
+      $('spinner').style.display = on ? 'inline-block' : 'none';
+    }
+
+    function setStatus(text){
+      $('statusBadge').textContent = text;
+    }
+
+    function clearOptions(select){
+      while(select.firstChild) select.removeChild(select.firstChild);
+    }
+
+    function populateProductFilter(products){
+      const sel = $('productFilter');
+      clearOptions(sel);
+      const arr = Array.from(products).sort((a,b)=>a.localeCompare(b));
+      for (const p of arr){
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        sel.appendChild(opt);
+      }
+    }
+
+    function selectedProducts(){
+      const sel = $('productFilter');
+      const chosen = new Set();
+      for (const opt of sel.options) if (opt.selected) chosen.add(opt.value);
+      return chosen;
+    }
+
+    let chart = null;
+    function renderTrendChart(labels, data){
+      const ctx = $('trendChart');
+      if (!ctx) return;
+
+      const revenueLabel = state.kpis.revenueField || 'revenue';
+
+      const config = {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: revenueLabel,
+            data,
+            borderColor: 'rgba(96,165,250,1)',
+            backgroundColor: 'rgba(96,165,250,.18)',
+            tension: 0.25,
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, labels: { color: '#e5e7eb' } },
+            tooltip: {
+              callbacks: {
+                label: (context) => `${context.dataset.label}: ${formatMoney(context.parsed.y)}`
+              }
+            }
+          },
+          scales: {
+            x: { ticks: { color: 'rgba(229,231,235,.85)' }, grid: { color: 'rgba(148,163,184,.16)' } },
+            y: { ticks: { color: 'rgba(229,231,235,.85)', callback: (v)=> formatCompact(v) }, grid: { color: 'rgba(148,163,184,.16)' } }
+          }
+        }
+      };
+
+      if (chart) chart.destroy();
+      chart = new Chart(ctx, config);
+    }
+
+    function recomputeAndRender(){
+      const {salesField, revenueField} = state.kpis;
+      const rows = state.rows;
+
+      const totalSales = rows.reduce((a,r)=> a + (Number.isFinite(r[salesField]) ? r[salesField] : 0), 0);
+      const totalRevenue = rows.reduce((a,r)=> a + (Number.isFinite(r[revenueField]) ? r[revenueField] : 0), 0);
+      const avgRevenue = rows.length ? totalRevenue / rows.length : NaN;
+
+      const byProd = new Map();
+      for (const r of rows){
+        const p = r.__product || 'Unknown';
+        const v = Number.isFinite(r[revenueField]) ? r[revenueField] : 0;
+        byProd.set(p, (byProd.get(p) || 0) + v);
+      }
+      const top = Array.from(byProd.entries()).sort((a,b)=>b[1]-a[1])[0];
+
+      $('kpiTotalSales').textContent = formatMoney(totalSales);
+      $('kpiTotalRevenue').textContent = formatMoney(totalRevenue);
+      $('kpiAvgRevenue').textContent = formatMoney(avgRevenue);
+
+      $('kpiSalesMeta').textContent = salesField || 'sales';
+      $('kpiRevenueMeta').textContent = revenueField || 'revenue';
+      $('kpiAvgMeta').textContent = rows.length ? `${rows.length} rows` : '0 rows';
+
+      if (top){
+        $('kpiTopProduct').textContent = top[0];
+        $('kpiTopProductFoot').textContent = `Revenue: ${formatMoney(top[1])}`;
+        $('kpiTopMeta').textContent = 'top by revenue';
+      } else {
+        $('kpiTopProduct').textContent = '—';
+        $('kpiTopProductFoot').textContent = '—';
+        $('kpiTopMeta').textContent = '—';
+      }
+
+      // Trend buckets
+      const group = state.filters.groupBy;
+      const buckets = new Map();
+      for (const r of rows){
+        const key = bucketKey(r.__date, group);
+        const v = Number.isFinite(r[revenueField]) ? r[revenueField] : 0;
+        buckets.set(key, (buckets.get(key) || 0) + v);
+      }
+
+      const sortedKeys = Array.from(buckets.keys()).sort((a,b)=>{
+        if (group === 'month') return a.localeCompare(b);
+        if (group === 'quarter'){
+          const [ay, aq] = a.split('-Q');
+          const [by, bq] = b.split('-Q');
+          const ai = Number(ay)*4 + (Number(aq)-1);
+          const bi = Number(by)*4 + (Number(bq)-1);
+          return ai - bi;
+        }
+        return a.localeCompare(b);
+      });
+
+      renderTrendChart(sortedKeys, sortedKeys.map(k => buckets.get(k) || 0));
+
+      // Top list
+      const list = Array.from(byProd.entries()).sort((a,b)=>b[1]-a[1]).slice(0,8);
+      const topList = $('topList');
+      topList.innerHTML = '';
+      if (!list.length){
+        topList.innerHTML = '<div class="hint">No rows match the current filters.</div>';
+      } else {
+        for (const [name, val] of list){
+          const div = document.createElement('div');
+          div.className = 'rowitem';
+          div.innerHTML = `<div class="name">${escapeHtml(name)}</div><div class="val">${formatMoney(val)}</div>`;
+          topList.appendChild(div);
+        }
+      }
+
+      $('topCountBadge').textContent = `${rows.length} rows`;
+      $('topProductsTitle').textContent = state.filters.products.size ? 'Filtered top products' : 'Top products across selection';
+    }
+
+    function applyFilters(){
+      if (!state.rawRows.length) return;
+
+      const dates = state.rawRows.map(r => r.__date).filter(Boolean);
+      const minD = new Date(Math.min(...dates.map(d=>d.getTime())));
+      const maxD = new Date(Math.max(...dates.map(d=>d.getTime())));
+
+      let startD = minD;
+      let endD = maxD;
+
+      if (state.filters.rangePreset === 'last12'){
+        startD = new Date(maxD);
+        startD.setMonth(startD.getMonth()-12);
+      } else if (state.filters.rangePreset === 'ytd'){
+        startD = new Date(maxD.getFullYear(), 0, 1);
+      }
+
+      const products = state.filters.products;
+      state.rows = state.rawRows.filter(r => {
+        const inDate = r.__date && r.__date >= startD && r.__date <= endD;
+        const inProd = products.size === 0 ? true : products.has(r.__product);
+        return inDate && inProd;
+      });
+
+      recomputeAndRender();
+    }
+
+    function prepareRows(rawRows){
+      if (!rawRows.length) return;
+      const headers = Object.keys(rawRows[0] || {});
+      const guesses = guessColumn(headers);
+
+      const revenueField = guesses.revenue || guesses.sales;
+      const salesField = guesses.sales || guesses.revenue;
+
+      if (!guesses.date) throw new Error('Could not detect a date column. Expected a column like "Date".');
+      if (!guesses.product) throw new Error('Could not detect a product column. Expected a column like "Product".');
+      if (!revenueField) throw new Error('Could not detect revenue/sales amount columns. Expected "Revenue" or "Sales".');
+      if (!salesField) throw new Error('Could not detect sales amount column.');
+
+      state.kpis.dateField = guesses.date;
+      state.kpis.productField = guesses.product;
+      state.kpis.revenueField = revenueField;
+      state.kpis.salesField = salesField;
+
+      state.rawRows = rawRows
+        .map(r => {
+          const dt = parseDate(r[state.kpis.dateField]);
+          const prod = (r[state.kpis.productField] ?? '').toString().trim();
+          const salesVal = parseNumber(r[state.kpis.salesField]);
+          const revVal = parseNumber(r[state.kpis.revenueField]);
+          return {
+            ...r,
+            __date: dt,
+            __product: prod,
+            [state.kpis.salesField]: salesVal,
+            [state.kpis.revenueField]: revVal
+          };
+        })
+        .filter(r => r.__date && !isNaN(r[state.kpis.salesField]) && !isNaN(r[state.kpis.revenueField]));
+
+      const products = new Set(state.rawRows.map(r => r.__product || 'Unknown'));
+      populateProductFilter(products);
+
+      state.rows = [...state.rawRows];
+      for (const opt of $('productFilter').options) opt.selected = true;
+      state.filters.products = selectedProducts();
+      state.filters.groupBy = $('groupBy').value;
+      state.filters.rangePreset = $('rangePreset').value;
+    }
+
+    async function loadCSV(file){
+      return new Promise((resolve, reject)=>{
+        Papa.parse(file, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => resolve(results.data || []),
+          error: reject
+        });
+      });
+    }
+
+    async function loadXLSX(file){
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data, {type:'array'});
+      const first = wb.SheetNames[0];
+      const ws = wb.Sheets[first];
+      return XLSX.utils.sheet_to_json(ws, {defval: ''});
+    }
+
+    async function handleFile(file){
+      setLoading(true);
+      setStatus('Loading data...');
+
+      try{
+        const name = file.name.toLowerCase();
+        const rows = name.endsWith('.csv') ? await loadCSV(file) : await loadXLSX(file);
+        if (!rows || !rows.length) throw new Error('No rows found in file.');
+
+        prepareRows(rows);
+        state.filters.products = selectedProducts();
+        applyFilters();
+        setStatus(`Loaded ${state.rawRows.length.toLocaleString()} rows`);
+      }catch(e){
+        console.error(e);
+        setStatus('Failed to load file');
+        alert('Failed to load file.\n\n' + e.message);
+      }finally{
+        setLoading(false);
+      }
+    }
+
+    function resetDashboard(){
+      $('fileInput').value = '';
+      $('productFilter').innerHTML = '';
+
+      $('kpiTotalSales').textContent = '—';
+      $('kpiTotalRevenue').textContent = '—';
+      $('kpiAvgRevenue').textContent = '—';
+      $('kpiTopProduct').textContent = '—';
+      $('kpiTopProductFoot').textContent = '—';
+
+      $('kpiSalesMeta').textContent = '—';
+      $('kpiRevenueMeta').textContent = '—';
+      $('kpiAvgMeta').textContent = '—';
+      $('kpiTopMeta').textContent = '—';
+
+      $('topList').innerHTML = '';
+      $('topCountBadge').textContent = '—';
+      $('topProductsTitle').textContent = '—';
+
+      $('rangePreset').value = 'all';
+      $('groupBy').value = 'month';
+
+      state.rawRows = [];
+      state.rows = [];
+      state.kpis = {salesField:null,revenueField:null,dateField:null,productField:null};
+      state.filters.products = new Set();
+      state.filters.groupBy = 'month';
+      state.filters.rangePreset = 'all';
+
+      if (chart) chart.destroy();
+      chart = null;
+
+      setStatus('No data loaded');
+    }
+
+    // NAV
+    function showView(which){
+      const isHome = which === 'home';
+      $('viewHome').classList.toggle('active', isHome);
+      $('viewDashboard').classList.toggle('active', !isHome);
+      $('navHome').classList.toggle('active', isHome);
+      $('navDashboard').classList.toggle('active', !isHome);
+    }
+
+    $('navHome').addEventListener('click', ()=> showView('home'));
+    $('navDashboard').addEventListener('click', ()=> showView('dashboard'));
+    $('goDashboardBtn').addEventListener('click', ()=> showView('dashboard'));
+
+    $('navHome').addEventListener('keydown', (e)=>{ if(e.key==='Enter') showView('home'); });
+    $('navDashboard').addEventListener('keydown', (e)=>{ if(e.key==='Enter') showView('dashboard'); });
+
+    // EVENTS
+    $('fileInput').addEventListener('change', (e)=>{
+      const f = e.target.files && e.target.files[0];
+      if (f) handleFile(f);
+    });
+
+    $('applyBtn').addEventListener('click', ()=>{
+      state.filters.groupBy = $('groupBy').value;
+      state.filters.rangePreset = $('rangePreset').value;
+      state.filters.products = selectedProducts();
+      applyFilters();
+    });
+
+    $('clearProductBtn').addEventListener('click', ()=>{
+      for (const opt of $('productFilter').options) opt.selected = false;
+      state.filters.products = new Set();
+      state.filters.groupBy = $('groupBy').value;
+      state.filters.rangePreset = $('rangePreset').value;
+      applyFilters();
+    });
+
+    $('resetBtn').addEventListener('click', resetDashboard);
+
+    $('groupBy').addEventListener('change', ()=>{
+      state.filters.groupBy = $('groupBy').value;
+      applyFilters();
+    });
+
+    $('rangePreset').addEventListener('change', ()=>{
+      state.filters.rangePreset = $('rangePreset').value;
+      applyFilters();
+    });
+
+    // initial
+    setStatus('No data loaded');
+    resetDashboard();
+    // show home
+    showView('home');
+  </script>
+</body>
+</html>
+
